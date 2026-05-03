@@ -1,3 +1,41 @@
+# Exercise 3
+A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
+
+For this,we introduced only `#pragma omp parallel for collapse(2) schedule(static)` after the first for loop.
+We couldn't collapse all 3 loops (ok, we could given that the math operations on each tile are not dependent on the last iteration, and this code was given with learning purposes). Hence, we did it for the second and 3rd loops.
+
+```bash
+serb1231@serb1231:~/Desktop/Assignment_3_Methods_HPC$ time ./code_ser 
+Computation completed.
+
+real	0m1.084s
+user	0m1.066s
+sys	0m0.010s
+```
+
+For the static scheduling
+```bash
+Time taken: 0.198145 seconds
+Computation completed.
+```
+
+For the dynamic scheduling
+```bash
+Time taken: 3.646292 seconds
+Computation completed.
+```
+
+For the guided scheduling
+```bash
+Time taken: 0.170582 seconds
+Computation completed.
+```
+
+The static one divides the work from the start to all the threads equally, that is why we have such a good speedup (for one of our local machine that has 8 cores).
+The dynamic one computes during runtime which thread is idle and gives it work. This computation is a huge overhead. That means we have a lot of tasks that are each very fast to solve.
+The guided one divides at the beginning the work approximatelly, and lets some work undivided. It will later divide it during runtime. It might be that either this is an artefact or a random happening, that the guided was faster, or some threads get more processing power and finish faster than others, hence should pick up work (after more testing, seems the first explanation fits).
+All of these were done on a local machine, as there was no need for a cluster to test this hypothesis.
+
 # Bonus
 Given that writting the output cannot be paralelized (all threads access the same file), we will not measure that time it takes (given that it has complexity O(N)). The creation of the neurons will not be measured either, although it can be paralelized using OpenMP.
 
