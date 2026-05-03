@@ -54,6 +54,56 @@ Regarding the elapsed time, we got the following results:
 "Bruh".
 At the same time, all the data is on the same cache line gotten by all the threads, so false sharing =((.
 
+Running on dardel, we also had a sanity check:
+
+![Dardel Sanity](images/Neurons_Parallel_Dardel.png)
+
+So the distribution is similar.
+
+
+```bash
+#SBATCH -J myjob
+# 10 minutes wall-clock time will be given to this job
+#SBATCH -t 00:10:00
+#SBATCH -A edu26.DD2356
+# Number of nodes
+#SBATCH -p shared
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=128
+#SBATCH --nodes=1
+#SBATCH -e error_file.e
+```
+
+These were the configurations used for dardel, We got a processor with 128 processing units (as we tested for 128 threads maximum).
+
+We have the following results:
+
+```bash
+Running with 1 threads...
+time: 0.302014 seconds threads: 1 
+Running with 2 threads...
+time: 1.083984 seconds threads: 2 
+Running with 4 threads...
+time: 1.095897 seconds threads: 4 
+Running with 8 threads...
+time: 1.068318 seconds threads: 8 
+Running with 16 threads...
+time: 1.089018 seconds threads: 16 
+Running with 32 threads...
+time: 1.063335 seconds threads: 32 
+Running with 64 threads...
+time: 1.061328 seconds threads: 64 
+Running with 128 threads...
+time: 1.337691 seconds threads: 128 
+```
+
+Even from having 2 threads we can already see a huge increase in the processing time. In the end, creating a new task for a simple 3 operations is not worth it.
+Also, we tried using rand_r(custom seed for each thread), and getting rid of the fprintf (in order to no longer have a global lock on the writting file, and lock on the random generator), and didn't get any improvement (see modifications `code_par.cpp`).
+
+The speedup:
+
+![SpeedUp Dardel](images/Speedup_Dardel.png)
+
 **How does task parallelism differ from loop parallelism?**
 Regarding the difference between `#pragma omp task` and `#pragma omp loop`. The task one is creating a task pool. Each time a thread finishes with a neuron, they just get the next task. For the for loop, the entire loop is divided by the nr of threads and a section is given to each of the threads. Given that the operations are of equal duration, it is better to divide and give from the start to each thread a split.
 

@@ -13,6 +13,9 @@
 double potentials[NEURONS];
 int firings[NEURONS];
 
+// added for random contention
+unsigned int thread_seeds[128];
+
 void simulate(int num_threads) {
     FILE *f = fopen("neuron_output.txt", "w");
     auto start = omp_get_wtime();
@@ -20,6 +23,8 @@ void simulate(int num_threads) {
     omp_set_num_threads(num_threads);
     #pragma omp parallel
     {
+        int tid = omp_get_thread_num();
+        auto seed = thread_seeds[tid];
         for (int step = 0; step < STEPS; step++)
         {
             #pragma omp single
@@ -27,12 +32,12 @@ void simulate(int num_threads) {
                 for (int i = 0; i < NEURONS; i++) {
                     #pragma omp task shared(potentials, firings, step) firstprivate(i)
                     {
-                        potentials[i] += rand() % 10;
+                        potentials[i] += rand_r(&seed) % 10;
                         if (potentials[i] > THRESHOLD) {
                             firings[i]++;
                             potentials[i] = 0;  // Reset potential
                         }
-                        fprintf(f, "%d %d %f\n", step, i, potentials[i]);
+                        // fprintf(f, "%d %d %f\n", step, i, potentials[i]);
                     }
                 }
             }
