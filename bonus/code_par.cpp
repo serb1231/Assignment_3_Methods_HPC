@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <time.h>
 #include <omp.h>
+#ifndef NEURONS
 #define NEURONS 1000
+#endif
 #define STEPS 500
+#ifndef THRESHOLD
 #define THRESHOLD 50.0
+#endif
 
 double potentials[NEURONS];
 int firings[NEURONS];
@@ -35,7 +39,7 @@ void simulate(int num_threads) {
         }
     }
     auto end = omp_get_wtime();
-    printf("Simulation completed in %f seconds for %d threads\n", end - start, num_threads);
+    printf("time: %f seconds threads: %d \n", end - start, num_threads);
     fclose(f);
 }
 
@@ -43,7 +47,7 @@ int main() {
     srand(time(NULL));
     // the creation of the configuration is not going to be measured
 
-    for (int nr_threads = 2; nr_threads <= 128; nr_threads *= 2) {
+    for (int nr_threads = 1; nr_threads <= 128; nr_threads *= 2) {
         printf("Running with %d threads...\n", nr_threads);
 
         for (int i = 0; i < NEURONS; i++) {
