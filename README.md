@@ -42,6 +42,35 @@ hieuvutongminh@MacBook-Air-cua-Hieu ex1 %
 *   **The Optimization:** Forcing the compiler to use the CPU's vector registers (like AVX2 or AVX-512) to perform multiple multiply-add operations simultaneously, often using `#pragma omp simd`.
 *   **What leads to this:** Once you fix the memory access patterns with transposition or tiling, the CPU's Arithmetic Logic Units (ALUs) become the bottleneck. Standard execution calculates one float at a time. Modern CPUs have wide vector registers that can process 8 or 16 floats in a single clock cycle. Recognizing that the inner loop's calculations are completely independent leads to vectorizing that loop to exploit this hardware capability.
 
+### 4. Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+#### 4.1 Show the screenshot of the output using the largest number of threads.
+**Dardel:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 182.2660 s  (reference)
+2. OMP parallel       : 0.9237 s correct=YES
+...
+```
+
+**School Cluster:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 20.7806 s  (reference)
+2. OMP parallel       : 4.3079 s correct=YES
+...
+```
+
+**Local Computer:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0050 s  (reference)
+2. OMP parallel       : 1.6181 s correct=YES
+...
+```
 
 ## Task 1.2: Implement a parallel version in matmul_omp_simd() that uses the construct of simd. Repeat the 4 subtasks as in Task 1.
 
@@ -82,6 +111,37 @@ hieuvutongminh@MacBook-Air-cua-Hieu ex1 %
 *   **The Optimization:** Reordering memory accesses by either transposing matrix `B` before the multiplication or computing in small sub-blocks (loop tiling).
 *   **What leads to this:** Profiling the hardware counters reveals a massive performance bottleneck caused by **cache misses**. In C, 2D arrays are stored in row-major order. While matrix `A` is read efficiently row-by-row, matrix `B` is read column-by-column. This means the CPU jumps forward by `K` elements in memory for every iteration, constantly fetching new cache lines from slow RAM and discarding the rest. Recognizing this stride issue leads to transposing `B` so both matrices can be read sequentially, maximizing ultra-fast L1 cache hits.
 
+### 4. Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+#### 4.1 Show the screenshot of the output using the largest number of threads.
+**Dardel:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 182.2660 s  (reference)
+...
+3. OMP SIMD           : 24.2081 s correct=YES
+...
+```
+
+**School Cluster:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 20.7806 s  (reference)
+...
+3. OMP SIMD           : 19.6802 s correct=YES
+```
+
+**Local Computer:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0050 s  (reference)
+...
+3. OMP SIMD           : 5.0011 s correct=YES
+...
+```
 
 ## Task 1.3: Implement a parallel version in matmul_omp_hybrid() that uses the hybrid of parallel and  simd constructs. Repeat the 4 subtasks as in Task 1.
 
@@ -124,6 +184,39 @@ hieuvutongminh@MacBook-Air-cua-Hieu ex1 %
 *   **The Optimization:** Nesting the SIMD directive inside the parallel region to combine both approaches simultaneously.
 *   **What leads to this:** In standalone experiments, `OMP parallel` utilizes all cores but leaves the vector ALUs underutilized. Conversely, `OMP SIMD` maximizes single-core math throughput but leaves the rest of the system cores idle (and is heavily bottlenecked by cache misses). The logical conclusion is a hybrid approach: ensuring that *every* core is actively working on independent rows, and *every* active core is using its vector registers to process the arithmetic as fast as possible.
 
+### 4. Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+#### 4.1 Show the screenshot of the output using the largest number of threads.
+**Dardel:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 182.2660 s  (reference)
+...
+4. OMP Hybrid         : 0.1965 s correct=YES
+...
+```
+
+**School Cluster:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 20.7806 s  (reference)
+...
+4. OMP Hybrid         : 4.4145 s correct=YES
+```
+
+**Local Computer:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0050 s  (reference)
+...
+4. OMP Hybrid         : 1.6294 s correct=YES
+...
+```
+
+
 ## Task 1.4: Implement a parallel version in matmul_omp_gpu() that uses the target construct to offload to GPU. Repeat the 4 subtasks as in Task 1 (GPU offloading is only performed on the school cluster).
 
 ### 1. Show a screenshot of your code
@@ -164,6 +257,39 @@ hieuvutongminh@MacBook-Air-cua-Hieu ex1 %
 #### 3. Maximizing Concurrency (Loop Fusing via `collapse(2)`)
 *   **The Optimization:** Applying `collapse(2)` to fuse the outer `i` and `k` loops into a single, massive 1D iteration space.
 *   **What leads to this:** A CPU is fully utilized with just 8 to 16 threads, but a GPU requires *thousands* (or tens of thousands) of active threads to hide memory latency and saturate its compute units. If $M=1024$, parallelizing only the outer loop provides only 1,024 independent tasks—barely enough to warm up a modern data-center GPU. By collapsing $M$ and $K$, you generate over 4 million independent tasks ($1024 \times 4096$). This massive pool of parallelism guarantees that every single GPU core stays constantly fed with work.
+
+### 4. Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+#### 4.1 Show the screenshot of the output using the largest number of threads.
+**Dardel:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 182.2660 s  (reference)
+...
+5. OMP GPU            : 0.6705 s correct=YES
+...
+```
+
+**School Cluster:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 20.7806 s  (reference)
+...
+5. OMP GPU            : 1.0990 s correct=YES
+```
+
+**Local Computer:**
+```
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0050 s  (reference)
+...
+5. OMP GPU            : 1.6156 s correct=YES
+...
+```
+
 
 # Exercise 3
 A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
