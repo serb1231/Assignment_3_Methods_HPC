@@ -1,0 +1,89 @@
+--- Matrix Multiplication Scaling Results ---
+Running with 1 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 4.9878 s  (reference)
+2. OMP parallel       : 4.9849 s correct=YES
+3. OMP SIMD           : 4.9714 s correct=YES
+4. OMP Hybrid         : 5.0303 s correct=YES
+5. OMP GPU            : 5.0061 s correct=YES
+
+Running with 2 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 4.9185 s  (reference)
+2. OMP parallel       : 2.7381 s correct=YES
+3. OMP SIMD           : 4.9922 s correct=YES
+4. OMP Hybrid         : 3.1228 s correct=YES
+5. OMP GPU            : 2.9747 s correct=YES
+
+Running with 4 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0568 s  (reference)
+2. OMP parallel       : 1.7860 s correct=YES
+3. OMP SIMD           : 5.0280 s correct=YES
+4. OMP Hybrid         : 1.8072 s correct=YES
+5. OMP GPU            : 1.8433 s correct=YES
+
+Running with 8 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 4.9891 s  (reference)
+2. OMP parallel       : 1.6311 s correct=YES
+3. OMP SIMD           : 4.9981 s correct=YES
+4. OMP Hybrid         : 1.6513 s correct=YES
+5. OMP GPU            : 1.6307 s correct=YES
+
+Running with 16 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0734 s  (reference)
+2. OMP parallel       : 1.6967 s correct=YES
+3. OMP SIMD           : 5.0731 s correct=YES
+4. OMP Hybrid         : 1.7030 s correct=YES
+5. OMP GPU            : 1.6940 s correct=YES
+
+Running with 32 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.1149 s  (reference)
+2. OMP parallel       : 1.6548 s correct=YES
+3. OMP SIMD           : 5.0788 s correct=YES
+4. OMP Hybrid         : 1.6989 s correct=YES
+5. OMP GPU            : 1.6675 s correct=YES
+
+Running with 64 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.1428 s  (reference)
+2. OMP parallel       : 1.8947 s correct=YES
+3. OMP SIMD           : 5.3486 s correct=YES
+4. OMP Hybrid         : 1.8218 s correct=YES
+5. OMP GPU            : 1.6806 s correct=YES
+
+Running with 128 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.1666 s  (reference)
+2. OMP parallel       : 1.6910 s correct=YES
+3. OMP SIMD           : 5.1317 s correct=YES
+4. OMP Hybrid         : 1.7196 s correct=YES
+5. OMP GPU            : 1.7084 s correct=YES
+
+Running with 256 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0454 s  (reference)
+2. OMP parallel       : 1.6283 s correct=YES
+3. OMP SIMD           : 5.0382 s correct=YES
+4. OMP Hybrid         : 1.6716 s correct=YES
+5. OMP GPU            : 1.6521 s correct=YES
+
+Running with 512 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.2025 s  (reference)
+2. OMP parallel       : 1.7066 s correct=YES
+3. OMP SIMD           : 5.2200 s correct=YES
+4. OMP Hybrid         : 1.7503 s correct=YES
+5. OMP GPU            : 1.7388 s correct=YES
+
+Running with 1024 threads...
+Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
+1. Serial             : 5.0050 s  (reference)
+2. OMP parallel       : 1.6181 s correct=YES
+3. OMP SIMD           : 5.0011 s correct=YES
+4. OMP Hybrid         : 1.6294 s correct=YES
+5. OMP GPU            : 1.6156 s correct=YES
+

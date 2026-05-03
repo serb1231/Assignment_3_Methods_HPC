@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the file where you want to save the results
-OUTPUT_FILE="scaling_results_dardel.txt"
+OUTPUT_FILE="scaling_results_school.txt"
 
 # Clear the file before starting (optional)
 echo "--- Matrix Multiplication Scaling Results ---" > $OUTPUT_FILE
