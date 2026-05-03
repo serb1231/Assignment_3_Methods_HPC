@@ -2,21 +2,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import io
 
-csv_data = """threads,time
-1,0.295068
-2,0.905161
-4,1.101895
-8,1.043622
-16,1.059031
-32,1.055875
-64,1.044552
-128,1.218416"""
+csv_data = """threads,time_seconds
+1,0.983707
+2,0.487687
+4,0.300952
+8,0.125116
+16,0.127712
+32,0.072661
+64,0.101159
+128,0.453738"""
 
 df = pd.read_csv(io.StringIO(csv_data))
 
 # compute the speedup
-baseline_time = df.iloc[0]['time']
-df['speedup'] = baseline_time / df['time']
+baseline_time = df.iloc[0]['time_seconds']
+df['speedup'] = baseline_time / df['time_seconds']
 
 plt.figure(figsize=(10, 6))
 

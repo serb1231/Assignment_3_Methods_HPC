@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <omp.h>
 
+#ifndef N
 #define N 500  // Grid size
+#endif
 #define ITER 1000  // Number of iterations
 #define DT 0.01  // Time step
 #define DX 1.0   // Grid spacing

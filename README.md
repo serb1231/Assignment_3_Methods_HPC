@@ -36,6 +36,17 @@ The dynamic one computes during runtime which thread is idle and gives it work. 
 The guided one divides at the beginning the work approximatelly, and lets some work undivided. It will later divide it during runtime. It might be that either this is an artefact or a random happening, that the guided was faster, or some threads get more processing power and finish faster than others, hence should pick up work (after more testing, seems the first explanation fits).
 All of these were done on a local machine, as there was no need for a cluster to test this hypothesis.
 
+For dardell we have the following speedup for different thread numbers
+
+![SpeedUp Dardel](images/SpeedUp_Dardel_Ex3.png)
+Apparently we only have 16 threads available, so either 16 cores or 8 cores and hyperthreading on dardel. Next time we should directly use Teddy's laptop as it has more computing power.
+
+For the school cluster we have the following thread numbers
+
+![SpeedUp School Cluster](images/SpeedUp_School_Cluster_Ex3.png)
+
+As we can see, we have maximum 32 threads available for us (medium allocation).
+
 # Bonus
 Given that writting the output cannot be paralelized (all threads access the same file), we will not measure that time it takes (given that it has complexity O(N)). The creation of the neurons will not be measured either, although it can be paralelized using OpenMP.
 
