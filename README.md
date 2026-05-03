@@ -38,14 +38,24 @@ All of these were done on a local machine, as there was no need for a cluster to
 
 For dardell we have the following speedup for different thread numbers
 
-![SpeedUp Dardel](images/SpeedUp_Dardel_Ex3.png)
+![SpeedUp Dardel](images/ex3/SpeedUp_Dardel_Ex3.png)
 Apparently we only have 16 threads available, so either 16 cores or 8 cores and hyperthreading on dardel. Next time we should directly use Teddy's laptop as it has more computing power.
 
 For the school cluster we have the following thread numbers
 
-![SpeedUp School Cluster](images/SpeedUp_School_Cluster_Ex3.png)
+![SpeedUp School Cluster](images/ex3/SpeedUp_School_Cluster_Ex3.png)
 
 As we can see, we have maximum 32 threads available for us (medium allocation).
+
+We also computed 3d the thread count versus problem size. The livve visualisation can be seen by running `python3 scripts/viz_ex_3d.py`. A picture we have here for the 3d visualization
+
+![Thread Count vs Problem Size](images/ex3/Threads_Vs_ProblemSize_Ex3.png)
+
+As we can see, increasing the problem size impacts performance for all threads exponentially (as we have O(N^2) dependency). After all the threads get to their max power output, the problem starts growing quadratically. The processing power didn't run out yet for the 32-128 thread count, as it is still on a plateau. Although our local machine only has 16 threads, we managed to have better performance for 32 than 16. This is probably an artifact.
+
+Also, visualization for exercise 3:
+
+![Visualization](images/ex3/Viz_Ex_3.png)
 
 # Bonus
 Given that writting the output cannot be paralelized (all threads access the same file), we will not measure that time it takes (given that it has complexity O(N)). The creation of the neurons will not be measured either, although it can be paralelized using OpenMP.
@@ -89,10 +99,10 @@ The `#pragma omp parallel` ensures that we start a parallel region. This is crea
 For the fprintf, on our local machine we didn't get any scrambled output (only prints being out of order), hence we decided against putting it inside a critical section.
 Currently the distribution for the serial version is:
 
-![Serial distribution](images/Neurons_Serial.png)
+![Serial distribution](images/bonus/Neurons_Serial.png)
 
 And for the parallel version:
-![Parallel distribution](images/Neurons_Parallel.png)
+![Parallel distribution](images/bonus/Neurons_Parallel.png)
 
 Hence the results are the same.
 
@@ -105,7 +115,7 @@ At the same time, all the data is on the same cache line gotten by all the threa
 
 Running on dardel, we also had a sanity check:
 
-![Dardel Sanity](images/Neurons_Parallel_Dardel.png)
+![Dardel Sanity](images/bonus/Neurons_Parallel_Dardel.png)
 
 So the distribution is similar.
 
@@ -151,7 +161,7 @@ Also, we tried using rand_r(custom seed for each thread), and getting rid of the
 
 The speedup:
 
-![SpeedUp Dardel](images/Speedup_Dardel.png)
+![SpeedUp Dardel](images/bonus/Speedup_Dardel.png)
 
 **How does task parallelism differ from loop parallelism?**
 Regarding the difference between `#pragma omp task` and `#pragma omp loop`. The task one is creating a task pool. Each time a thread finishes with a neuron, they just get the next task. For the for loop, the entire loop is divided by the nr of threads and a section is given to each of the threads. Given that the operations are of equal duration, it is better to divide and give from the start to each thread a split.
@@ -224,13 +234,13 @@ Also, for a real neural connection, a whole iteration has to pass before we do a
 **What happens to performance as the number of neurons increases?**
 For this question, we decided agains writting a code that will programatically increase the size for neurons. Right now, that data is declared in the .data section of the memory. Because of that, we used a script that will define a the NEURONS variable to be a certain size between 1000 and 10000.
 
-![Time vs Neurons](images/Time_Vs_Nr_Threads_Bonus.png)
+![Time vs Neurons](images/bonus/Time_Vs_Nr_Threads_Bonus.png)
 
 As we can see th speedup is the same for all the sizes of the neurons. That would mean that the overhead for creating tasks and giving them away to threads is much bigger than the compute time of the neuron (incrementing a variable and comparing to a constant). Which would make sense. Approximatelly 10 times as slow creating a task than doing without any tasks.
 
 **How does varying the firing threshold affect the overall neuron activity?**
 
-![Time vs Threshold](images/Time_Vs_Nr_Threads_Bonus_Vary_Threshold.png)
+![Time vs Threshold](images/bonus/Time_Vs_Nr_Threads_Bonus_Vary_Threshold.png)
 
 The speedup is similar. We tested having the threshold from 10 to 100. In hypothesis, having a higher threshold would only decrease the number of times it fires, hence the number of times we would enter that branch. It would only help with the branch prediction. And it quite did:
 
@@ -258,3 +268,4 @@ time: 0.129101 seconds threads: 1
 # GPT Usage
 For the bonus, every time a `printf` or `fprintf` was written, it was written with copilot (it can write more meaningfull debug and print messages, and the shortcut `ctrl + shift + p` to activate it and deactivate it is just too good when you don't have imagination.
 The `plot_time-vs_threads_bonus.py` was done using gemini. It was verified by looking at the resulting plot and the input data.
+For the other plots, gemini was used for debuggin and syntax.

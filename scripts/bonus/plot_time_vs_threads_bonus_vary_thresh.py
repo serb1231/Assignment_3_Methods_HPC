@@ -3,7 +3,7 @@ import re
 import numpy as np
 
 
-file_path = 'data/bonus_data_vary_threshold.txt'
+file_path = 'data/bonus/bonus_data_vary_threshold.txt'
 
 data = {}
 current_size = None
