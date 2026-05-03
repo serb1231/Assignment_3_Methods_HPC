@@ -1,3 +1,170 @@
+# ASSIGNMENT 3: Shared-Memory Programming
+
+# Exercise 1 
+## Task 1.1: Implement a parallel version in 'matmul_omp_parallel()' that uses the construct of parallel (for).
+
+### 1. Show a screenshot of your code
+
+```
+void matmul_omp_parallel(const DTYPE *A, const DTYPE *B, DTYPE *C,
+                         int M, int N, int K)
+{
+#pragma omp parallel for
+    for (int i = 0; i < M; i++)
+    {
+        for (int k = 0; k < K; k++)
+        {
+            DTYPE sum = (DTYPE)0;
+            for (int j = 0; j < N; j++)
+                sum += A[i * N + j] * B[j * K + k];
+            C[i * K + k] = sum;
+        }
+    }
+}
+```
+
+### 2. Show a screenshot of the code compilation
+```
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % gcc-15 -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % 
+```
+### 3. List 3 attempted optimizations that are effective in your experiments and discuss what leads you to reach those optimizations.
+
+#### 1. Matrix Transposition (Solving Stride Issues)
+*   **The Optimization:** Transposing matrix `B` into a temporary matrix before starting the multiplication. You compute $C = A \times B^T$.
+*   **What leads to this:** If you look at your innermost loop, `A[i * N + j]` accesses memory sequentially (stride-1), which is extremely fast. However, `B[j * K + k]` jumps forward by `K` elements every iteration. In C, 2D arrays are stored in row-major order. Jumping across rows causes constant **cache misses** because the CPU fetches entire cache lines from RAM, uses one float, and throws the rest away. By transposing `B` first, both `A` and `B` can be read sequentially in the innermost loop, dramatically reducing cache thrashing.
+
+#### 2. Loop Tiling / Blocking (Maximizing Cache Locality)
+*   **The Optimization:** Breaking down the massive loops into smaller sub-blocks (or "tiles") that fit perfectly inside the CPU's ultra-fast L1 or L2 cache.
+*   **What leads to this:** With dimensions like 1024x4096, the matrices are megabytes in size—far too large to fit in the L1 cache. In a standard loop, by the time the CPU finishes the first row of `A`, the data for the beginning of `B` has already been evicted from the cache to make room for new data. Tiling ensures that you load a small chunk of `A` and a small chunk of `B`, compute all possible partial sums for that specific chunk, and *only then* move on. This maximizes the reuse of data already loaded into the CPU cache.
+
+#### 3. SIMD Vectorization (Data-Level Parallelism)
+*   **The Optimization:** Forcing the compiler to use the CPU's vector registers (like AVX2 or AVX-512) to perform multiple multiply-add operations simultaneously, often using `#pragma omp simd`.
+*   **What leads to this:** Once you fix the memory access patterns with transposition or tiling, the CPU's Arithmetic Logic Units (ALUs) become the bottleneck. Standard execution calculates one float at a time. Modern CPUs have wide vector registers that can process 8 or 16 floats in a single clock cycle. Recognizing that the inner loop's calculations are completely independent leads to vectorizing that loop to exploit this hardware capability.
+
+
+## Task 1.2: Implement a parallel version in matmul_omp_simd() that uses the construct of simd. Repeat the 4 subtasks as in Task 1.
+
+### 1. Show a screenshot of your code
+
+```
+/* 3. OpenMP SIMD version */
+void matmul_omp_simd(const DTYPE *A, const DTYPE *B, DTYPE *C, int M, int N,
+                     int K) {
+  for (int i = 0; i < M; i++) {
+    for (int k = 0; k < K; k++) {
+      DTYPE sum = (DTYPE)0;
+      #pragma omp simd reduction(+ : sum)
+      for (int j = 0; j < N; j++)
+        sum += A[i * N + j] * B[j * K + k];
+      C[i * K + k] = sum;
+    }
+  }
+}
+```
+### 2. Show a screenshot of the code compilation
+```
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % gcc-15 -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % 
+```
+
+### 3. List 3 attempted optimizations that are effective in your experiments and discuss what leads you to reach those optimizations.
+
+#### 1. Loop Parallelization (Multithreading)
+*   **The Optimization:** Distributing the outer loop iterations across all available CPU cores using `#pragma omp parallel for`.
+*   **What leads to this:** When running a naive serial matrix multiplication, system monitors show only a single CPU core operating at 100% while the rest are idle. Analyzing the algorithm reveals that computing one row of the output matrix `C` has absolutely no data dependency on any other row. This guarantees that dividing the rows among multiple threads is safe, leading directly to this optimization to slash overall execution time.
+
+#### 2. SIMD Vectorization (Data-Level Parallelism)
+*   **The Optimization:** Forcing the CPU to compute multiple mathematical operations simultaneously within a single core using `#pragma omp simd reduction(+:sum)` on the innermost loop.
+*   **What leads to this:** Once the code is parallelized across multiple cores, the bottleneck becomes the math throughput of the individual cores. Standard execution processes one scalar float per instruction. However, recognizing that modern CPUs have wide vector registers (like AVX2 or AVX-512) that can process 8 or 16 floats in a single clock cycle leads to vectorizing the innermost loop, as it performs the exact same multiply-add operation repeatedly on adjacent data.
+
+#### 3. Cache Optimization (Matrix Transposition or Tiling)
+*   **The Optimization:** Reordering memory accesses by either transposing matrix `B` before the multiplication or computing in small sub-blocks (loop tiling).
+*   **What leads to this:** Profiling the hardware counters reveals a massive performance bottleneck caused by **cache misses**. In C, 2D arrays are stored in row-major order. While matrix `A` is read efficiently row-by-row, matrix `B` is read column-by-column. This means the CPU jumps forward by `K` elements in memory for every iteration, constantly fetching new cache lines from slow RAM and discarding the rest. Recognizing this stride issue leads to transposing `B` so both matrices can be read sequentially, maximizing ultra-fast L1 cache hits.
+
+
+## Task 1.3: Implement a parallel version in matmul_omp_hybrid() that uses the hybrid of parallel and  simd constructs. Repeat the 4 subtasks as in Task 1.
+
+### 1. Show a screenshot of your code
+
+```
+void matmul_omp_hybrid(const DTYPE *A, const DTYPE *B, DTYPE *C, int M, int N,
+                       int K) {
+#pragma omp parallel for
+  for (int i = 0; i < M; i++) {
+    for (int k = 0; k < K; k++) {
+      DTYPE sum = (DTYPE)0;
+#pragma omp simd reduction(+ : sum)
+      for (int j = 0; j < N; j++)
+        sum += A[i * N + j] * B[j * K + k];
+      C[i * K + k] = sum;
+    }
+  }
+}
+```
+
+### 2. Show a screenshot of the code compilation
+
+```
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % gcc-15 -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % 
+```
+
+### 3. List 3 attempted optimizations that are effective in your experiments and discuss what leads you to reach those optimizations.
+
+#### 1. Thread-Level Parallelism (Outer Loop Multithreading)
+*   **The Optimization:** Applying `#pragma omp parallel for` to the outermost `i` loop.
+*   **What leads to this:** Running the serial code on a multicore machine (like an Apple Silicon Mac) leaves most CPU cores completely idle. By analyzing the matrix multiplication algorithm, it becomes clear that computing each row of the output matrix `C` is entirely independent of the others. This lack of data dependency naturally leads to distributing the rows across all available threads, drastically reducing the baseline execution time.
+
+#### 2. Data-Level Parallelism (Inner Loop Vectorization)
+*   **The Optimization:** Applying `#pragma omp simd reduction(+:sum)` to the innermost `j` loop.
+*   **What leads to this:** Once the workload is distributed across multiple cores, the bottleneck shifts to the mathematical throughput of each individual core. Standard execution processes one scalar float at a time. Recognizing that modern CPUs have wide vector units capable of processing multiple floats in a single clock cycle leads to vectorizing this loop. The `reduction(+:sum)` is necessary to safely accumulate the concurrent vector math into a single variable without race conditions.
+
+#### 3. The Hybrid Combination (Integrating Threading + SIMD)
+*   **The Optimization:** Nesting the SIMD directive inside the parallel region to combine both approaches simultaneously.
+*   **What leads to this:** In standalone experiments, `OMP parallel` utilizes all cores but leaves the vector ALUs underutilized. Conversely, `OMP SIMD` maximizes single-core math throughput but leaves the rest of the system cores idle (and is heavily bottlenecked by cache misses). The logical conclusion is a hybrid approach: ensuring that *every* core is actively working on independent rows, and *every* active core is using its vector registers to process the arithmetic as fast as possible.
+
+## Task 1.4: Implement a parallel version in matmul_omp_gpu() that uses the target construct to offload to GPU. Repeat the 4 subtasks as in Task 1 (GPU offloading is only performed on the school cluster).
+
+### 1. Show a screenshot of your code
+
+```
+void matmul_omp_gpu(const DTYPE *A, const DTYPE *B, DTYPE *C, int M, int N,
+                    int K) {
+#pragma omp target teams distribute parallel for map(                          \
+        to : A[0 : M * N], B[0 : N * K]) map(from : C[0 : M * K]) collapse(2)
+  for (int i = 0; i < M; i++) {
+    for (int k = 0; k < K; k++) {
+      DTYPE sum = (DTYPE)0;
+      for (int j = 0; j < N; j++)
+        sum += A[i * N + j] * B[j * K + k];
+      C[i * K + k] = sum;
+    }
+  }
+}
+```
+
+### 2. Show a screenshot of the code compilation
+
+```
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % gcc-15 -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+hieuvutongminh@MacBook-Air-cua-Hieu ex1 % 
+```
+
+### 3. List 3 attempted optimizations that are effective in your experiments and discuss what leads you to reach those optimizations.
+
+#### 1. Explicit Memory Mapping (Minimizing PCIe Data Transfer)
+*   **The Optimization:** Using the `map(to: A[0:M*N], B[0:N*K]) map(from: C[0:M*K])` clauses.
+*   **What leads to this:** GPUs have their own dedicated high-speed memory (VRAM), which is physically separate from the CPU's main RAM. The connection between them (the PCIe bus) is extremely slow compared to the GPU's internal compute speed. If OpenMP is left to guess memory bounds, it might copy entire arrays back and forth unnecessarily, completely ruining performance. By explicitly declaring that `A` and `B` only need to travel *to* the device once, and `C` only needs to travel *from* the device once, you eliminate redundant, bottleneck-inducing data transfers.
+
+#### 2. Hierarchical Parallelism (`teams distribute parallel for`)
+*   **The Optimization:** Utilizing the full hierarchy of `teams distribute parallel for` instead of a simple `#pragma omp target parallel for`.
+*   **What leads to this:** GPU hardware is fundamentally different from a CPU; it consists of multiple Streaming Multiprocessors (SMs), each containing many smaller cores. If you only use `parallel for`, OpenMP might map your loops to a single "team" of threads (a single block), leaving 90% of the GPU hardware completely idle. Using `teams distribute` creates many independent teams (distributing work across *all* SMs), and `parallel for` spawns threads within those teams, perfectly mapping the software loops to the physical GPU architecture.
+
+#### 3. Maximizing Concurrency (Loop Fusing via `collapse(2)`)
+*   **The Optimization:** Applying `collapse(2)` to fuse the outer `i` and `k` loops into a single, massive 1D iteration space.
+*   **What leads to this:** A CPU is fully utilized with just 8 to 16 threads, but a GPU requires *thousands* (or tens of thousands) of active threads to hide memory latency and saturate its compute units. If $M=1024$, parallelizing only the outer loop provides only 1,024 independent tasks—barely enough to warm up a modern data-center GPU. By collapsing $M$ and $K$, you generate over 4 million independent tasks ($1024 \times 4096$). This massive pool of parallelism guarantees that every single GPU core stays constantly fed with work.
+
 # Exercise 3
 A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
 
@@ -5,7 +172,7 @@ For this,we introduced only `#pragma omp parallel for collapse(2) schedule(stati
 We couldn't collapse all 3 loops (ok, we could given that the math operations on each tile are not dependent on the last iteration, and this code was given with learning purposes). Hence, we did it for the second and 3rd loops.
 
 ```bash
-serb1231@serb1231:~/Desktop/Assignment_3_Methods_HPC$ time ./code_ser 
+serb1231@serb1231:~/Desktop/Assignment_3_Methods_HPC$ time ./code_ser
 Computation completed.
 
 real	0m1.084s
@@ -14,18 +181,21 @@ sys	0m0.010s
 ```
 
 For the static scheduling
+
 ```bash
 Time taken: 0.198145 seconds
 Computation completed.
 ```
 
 For the dynamic scheduling
+
 ```bash
 Time taken: 3.646292 seconds
 Computation completed.
 ```
 
 For the guided scheduling
+
 ```bash
 Time taken: 0.170582 seconds
 Computation completed.
@@ -58,6 +228,7 @@ Also, visualization for exercise 3:
 ![Visualization](images/ex3/Viz_Ex_3.png)
 
 # Bonus
+
 Given that writting the output cannot be paralelized (all threads access the same file), we will not measure that time it takes (given that it has complexity O(N)). The creation of the neurons will not be measured either, although it can be paralelized using OpenMP.
 
 We paralelized the code in the following way
@@ -92,12 +263,14 @@ void simulate() {
     fclose(f);
 }
 ```
+
 The `#pragma omp parallel` ensures that we start a parallel region. This is creating the threads. The `#pragma omp single` is insuring that only a single thread will execute the operations inside. All the threads will execute the first for loop, but it is a neccessary operation (if we put the `#pragma omp parallel` inside the first for loop, we would be creating and destroying the threads multiple times). The single thread is going multiple times over the second loop, for each iteration creating a new task. Each task will be ran by a single thread (like a workpool, let's call it `A`). The aguments for the `#pragma omp task':
+
 - `shared(potentials, firings, step)` means that all threads will have access to the same `potentials`, `firings` and `step` variables. This is necessary because we want all threads to update the same data.
 - `firstprivate(i)` means that each thread will have its own copy of the `i`, otherwise the `A` will change `i` before the tasks have time to update.
 - `shared(...)` means that all the spawned threads will have access to the same vectors.
-For the fprintf, on our local machine we didn't get any scrambled output (only prints being out of order), hence we decided against putting it inside a critical section.
-Currently the distribution for the serial version is:
+  For the fprintf, on our local machine we didn't get any scrambled output (only prints being out of order), hence we decided against putting it inside a critical section.
+  Currently the distribution for the serial version is:
 
 ![Serial distribution](images/bonus/Neurons_Serial.png)
 
@@ -107,6 +280,7 @@ And for the parallel version:
 Hence the results are the same.
 
 Regarding the elapsed time, we got the following results:
+
 - Serial version: 0.29 seconds
 - Parallel version: 3.03 seconds
 
@@ -118,7 +292,6 @@ Running on dardel, we also had a sanity check:
 ![Dardel Sanity](images/bonus/Neurons_Parallel_Dardel.png)
 
 So the distribution is similar.
-
 
 ```bash
 #SBATCH -J myjob
@@ -139,21 +312,21 @@ We have the following results:
 
 ```bash
 Running with 1 threads...
-time: 0.302014 seconds threads: 1 
+time: 0.302014 seconds threads: 1
 Running with 2 threads...
-time: 1.083984 seconds threads: 2 
+time: 1.083984 seconds threads: 2
 Running with 4 threads...
-time: 1.095897 seconds threads: 4 
+time: 1.095897 seconds threads: 4
 Running with 8 threads...
-time: 1.068318 seconds threads: 8 
+time: 1.068318 seconds threads: 8
 Running with 16 threads...
-time: 1.089018 seconds threads: 16 
+time: 1.089018 seconds threads: 16
 Running with 32 threads...
-time: 1.063335 seconds threads: 32 
+time: 1.063335 seconds threads: 32
 Running with 64 threads...
-time: 1.061328 seconds threads: 64 
+time: 1.061328 seconds threads: 64
 Running with 128 threads...
-time: 1.337691 seconds threads: 128 
+time: 1.337691 seconds threads: 128
 ```
 
 Even from having 2 threads we can already see a huge increase in the processing time. In the end, creating a new task for a simple 3 operations is not worth it.
@@ -169,7 +342,7 @@ Regarding the difference between `#pragma omp task` and `#pragma omp loop`. The 
 Results for the task:
 
 ```bash
-serb1231@serb1231:~/Assignment_3_Methods_HPC/ex3$ ./a.out 
+serb1231@serb1231:~/Assignment_3_Methods_HPC/ex3$ ./a.out
 Running with 2 threads...
 Simulation completed in 0.807757 seconds for 2 threads
 Running with 4 threads...
@@ -187,8 +360,9 @@ Simulation completed in 1.136145 seconds for 128 threads
 ```
 
 Results for the for loop:
+
 ```bash
-serb1231@serb1231:~/Desktop/Assignment_3_Methods_HPC/bonus$ ./a.out 
+serb1231@serb1231:~/Desktop/Assignment_3_Methods_HPC/bonus$ ./a.out
 Running with 2 threads...
 Simulation completed in 0.199465 seconds for 2 threads
 Running with 4 threads...
@@ -207,11 +381,10 @@ Simulation completed in 0.616667 seconds for 128 threads
 
 Better results as we can see. Our machine has a maixmum of 16 independent threads, so if we increase further we will not get any better results (but at the same time, if we use 16, we will enter teritory of cpu nodes that are using firefox and other apps). No ideea what happens when we go for 32 threads or higher on this machine. Let the OS do it's thing I guess. Reference `code_loop_par.cpp`.
 
-
 **How can task dependencies be introduced to simulate neural connections?**
 Each neuron is independent of eachother. That means that means that the only task dependency is given by the step. So we can update a neuron at the next step if the one at the last step was done. Hence, we can put a single `inout: potential[i]`. This will signify that even if multiple threads go to multiple steps in the iteration, all of them know there is a dependency based on the nr of steps (cause all of them first found that `inout: potential[i]` on the earlies step, and when they encounterr it on another step, know the dependency).
 
-``` bash
+```bash
 Running with 2 threads...
 Simulation completed in 0.247394 seconds for 2 threads
 Running with 4 threads...
@@ -247,25 +420,25 @@ The speedup is similar. We tested having the threshold from 10 to 100. In hypoth
 ```bash
 Testing size: 10
 Running with 1 threads...
-time: 0.095370 seconds threads: 1 
+time: 0.095370 seconds threads: 1
 Testing size: 20
 Running with 1 threads...
-time: 0.114515 seconds threads: 1 
+time: 0.114515 seconds threads: 1
 ...
 Testing size: 80
 Running with 1 threads...
-time: 0.135356 seconds threads: 1 
+time: 0.135356 seconds threads: 1
 Testing size: 90
 Running with 1 threads...
-time: 0.135061 seconds threads: 1 
+time: 0.135061 seconds threads: 1
 Testing size: 100
 Running with 1 threads...
-time: 0.129101 seconds threads: 1 
+time: 0.129101 seconds threads: 1
 
 ```
 
-
 # GPT Usage
+
 For the bonus, every time a `printf` or `fprintf` was written, it was written with copilot (it can write more meaningfull debug and print messages, and the shortcut `ctrl + shift + p` to activate it and deactivate it is just too good when you don't have imagination.
 The `plot_time-vs_threads_bonus.py` was done using gemini. It was verified by looking at the resulting plot and the input data.
 For the other plots, gemini was used for debuggin and syntax.
