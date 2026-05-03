@@ -47,7 +47,7 @@ void write_output() {
 }
 
 int main() {
-    for (int num_threads = 1; num_threads <= 8; num_threads *= 2) {
+    for (int num_threads = 1; num_threads <= 128; num_threads *= 2) {
         printf("Running with %d threads.\n", num_threads);
         initialize();
         compute(num_threads);
