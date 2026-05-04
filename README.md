@@ -72,6 +72,16 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 ...
 ```
 
+#### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![OMP Parallel Scaling](scripts/ex1/scaling_parallel.png)
+
+#### 4.3 For each system, analyze the obtained performance results.
+*   **Local Computer**: Scales efficiently up to 4 threads (reaching ~1.6s) before plateauing. This indicates the local CPU likely has 4 physical performance cores. Adding more threads beyond the physical core count yields no further speedup and introduces minor context-switching overhead.
+*   **School Cluster**: Shows near-ideal strong scaling up to 32 threads (reaching ~2.6s). Beyond 32 threads, the performance begins to degrade (rising to ~4.6s at 512 threads) due to thread contention and memory bandwidth saturation, indicating the node likely has around 32 physical cores.
+*   **Dardel**: Exhibits massive, consistent scaling up to 256 threads, dropping execution time from 188s to 0.76s. This perfectly matches the architecture of Dardel's AMD EPYC nodes (128 physical cores, 256 hardware threads via SMT). Beyond 256 threads, overhead begins to outweigh parallelization benefits.
+
+
 ## Task 1.2: Implement a parallel version in matmul_omp_simd() that uses the construct of simd. Repeat the 4 subtasks as in Task 1.
 
 ### 1. Show a screenshot of your code
@@ -142,6 +152,16 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 3. OMP SIMD           : 5.0011 s correct=YES
 ...
 ```
+#### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![OMP SIMD Scaling](scripts/ex1/scaling_simd.png)
+
+#### 4.3 For each system, analyze the obtained performance results.
+*   **Local Computer**: Execution time remains completely flat at ~5.0s regardless of the number of threads.
+*   **School Cluster**: Execution time remains flat at ~20-21s regardless of the number of threads.
+*   **Dardel**: Execution time fluctuates slightly due to system noise but remains fundamentally flat around ~24-36s.
+*   **Overall Analysis**: This flat behavior across all three systems is entirely expected. The `#pragma omp simd` directive solely vectorizes the innermost loop to use wide AVX registers on a *single thread*. It does not spawn multiple CPU threads. Therefore, changing the `OMP_NUM_THREADS` environment variable has zero impact on the execution time of this specific version.
+
 
 ## Task 1.3: Implement a parallel version in matmul_omp_hybrid() that uses the hybrid of parallel and  simd constructs. Repeat the 4 subtasks as in Task 1.
 
@@ -215,6 +235,16 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 4. OMP Hybrid         : 1.6294 s correct=YES
 ...
 ```
+
+#### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![OMP Hybrid Scaling](scripts/ex1/scaling_hybrid.png)
+
+
+#### 4.3 For each system, analyze the obtained performance results.
+*   **Local Computer**: Scales similarly to the parallel version up to 4-8 threads, plateauing around 1.6s. The combination of thread-level and data-level parallelism maximizes the throughput of the local CPU cores.
+*   **School Cluster**: Scales effectively up to 32 threads (reaching ~2.5s). It performs slightly better than the pure parallel version because each individual thread is processing multiple floats per clock cycle using vector instructions.
+*   **Dardel**: Demonstrates exceptional scaling up to 256 threads, achieving a blistering 0.19s execution time. This is the fastest CPU-based time observed across all experiments. By combining 256 active hardware threads with SIMD vectorization on every core, this hybrid approach fully saturates the massive compute capability of the Dardel node.
 
 
 ## Task 1.4: Implement a parallel version in matmul_omp_gpu() that uses the target construct to offload to GPU. Repeat the 4 subtasks as in Task 1 (GPU offloading is only performed on the school cluster).
@@ -292,6 +322,14 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 # Exercise 2
 ## Task 1.1: which Graph representation are used?
 This graph is represented through an Adjacency matrix, and is stored through a Compressed Sparse Row representation. In an adjacency matrix, if A[i,j] is 1 (non-zero) then there is an adjacency between nodes i and j, and otherwise A[i,j] = 0. Therefore, since we can know everything about the graph just through the adjacencies, we do CSR formatting for this matrix to only store the neccessary informaton about which cells have non-zero values (adjacencies between those two graph nodes) in the matrix. 
+#### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![OMP GPU Scaling](scripts/ex1/scaling_gpu.png)
+
+#### 4.3 For each system, analyze the obtained performance results.
+*   **Local Computer**: Shows a flat execution time of ~1.6s across all thread counts. Since local Macs typically lack OpenMP offloading support for local GPUs (without highly specific compiler toolchains), the `target` construct fell back to executing the loops on the host CPU.
+*   **School Cluster**: Execution time remains extremely fast and completely flat (~1.0s to 1.2s) regardless of `OMP_NUM_THREADS`. This indicates successful GPU offloading! The massive matrix multiplication was pushed to the GPU's thousands of CUDA cores. Since the GPU handles the parallelism internally, changing the number of *CPU* threads has no effect on the execution time.
+*   **Dardel**: Scales with the number of CPU threads (reaching ~0.67s at 1024 threads) rather than remaining flat. This indicates that the code was compiled without the specific GPU target architecture flags for Dardel's AMD GPUs, causing OpenMP to fall back to executing the `teams distribute parallel for` region across the host CPU threads.
 
 ## Task 1.2: Describe your design of the work sharing among threads
 The work sharing among threads is done simply on the frontier level. This is done through using #pragma omp parallel for to have the running threads share the for loop iterations done at each frontier. Each thread will then go through its iterations for each of its assigned iterations, synchronizing shared data structure update sections with other threads so only one thread does updates at a time.
