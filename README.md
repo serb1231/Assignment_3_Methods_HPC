@@ -328,6 +328,57 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 *   **School Cluster**: Execution time remains extremely fast and completely flat (~1.0s to 1.2s) regardless of `OMP_NUM_THREADS`. This indicates successful GPU offloading! The massive matrix multiplication was pushed to the GPU's thousands of CUDA cores. Since the GPU handles the parallelism internally, changing the number of *CPU* threads has no effect on the execution time.
 *   **Dardel**: Scales with the number of CPU threads (reaching ~0.67s at 1024 threads) rather than remaining flat. This indicates that the code was compiled without the specific GPU target architecture flags for Dardel's AMD GPUs, causing OpenMP to fall back to executing the `teams distribute parallel for` region across the host CPU threads.
 
+# Exercise 2
+
+## Task 1.1: which Graph representation are used?
+This graph is represented through an Adjacency matrix, and is stored through a Compressed Sparse Row representation. In an adjacency matrix, if A[i,j] is 1 (non-zero) then there is an adjacency between nodes i and j, and otherwise A[i,j] = 0. Therefore, since we can know everything about the graph just through the adjacencies, we do CSR formatting for this matrix to only store the neccessary informaton about which cells have non-zero values (adjacencies between those two graph nodes) in the matrix. 
+
+## Task 1.2: Describe your design of the work sharing among threads
+The work sharing among threads is done simply on the frontier level. This is done through using #pragma omp parallel for to have the running threads share the for loop iterations done at each frontier. Each thread will then go through its iterations for each of its assigned iterations, synchronizing shared data structure update sections with other threads so only one thread does updates at a time.
+
+## Task 1.3: Describe your handling of shared data structures
+The row_ptr vector has unique values in all indeces, and so the main difficulty for shared data access is when two threads might get the same node from different indeces in the col_idx array - as node values repeat there. If this node has been previously visited (dist != -1), then the thread does nothing, whereas if it hasn't been, then the distance is updated. Therefore, the shared data access needs to be handled only inside the code section where this update happens, so as to not introduce uneccessary locking. This is done by synchronizing these updates inside a #pragma omp critical block, and introducing a concurrentFlag vector. The update code inside the critical section will only execute if the concurrentFlag for this node is set to false, and if it is false then a further update is done to set this flag to true. In this manner, we limit the update for a previously unvisited node to only be done by the thread that first reaches this critical section. Even if multiple threads both see that the node is unvisited, the first one will run the critical section, update the flag for the node, and then all the other threads will now not run any updates as the flag has been updated.
+
+## Task 1.4: List 3 attempted optimizations (that may or may not work) -
+1: The simplest optimization done was just to parallelize the for loop for the frontier. The different indexes of the frontier don't do any computations that rely on outputs from other iterations, and so parallelizing this is a trivial method to try to optimize the BFS.
+
+2: The second optimization was to introduce synchronization, and incorporate a critical section of the code inside the code block when a thread sees that a node has not been visited, and to have a separate flag inside this section to prevent from duplicating writing the distance/pushing back to next frontier. Doing this added synchronization for shared data structure updates during the parallel portion can possibly save time over instead having to do a non-trivial local frontiers join after the parallel block. Doing this synchronization right after checking if the node has been visited or not is the lowest level possible to keep the lock while not impacting shared data structure storage, doing it further outside could cause uneccessary locking. 
+
+3: A third optimization done was to have dynamic scheduling done for the for loop. Some nodes may have many more neighbors that need to be iterated through, and so introducing dynamic scheduling can help to try and even the workload among the threads over a simple standard scheduling.
+
+## Task 1.5: Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+### 5.1: Show a screenshot of the output using the largest number of threads.
+
+### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+### 5.3: For each system, analyze the obtained performance results.
+
+
+## Task 2.2: Describe your design of the work sharing among threads
+This time work sharing is done differently between threads than in the previous method. This time, we have one "manager" thread that splits each for loop iteration into several chunks. For each chunk, using #pragma omp task around a for loop of all the nodes in the chunk, the manager will then spawn a worker thread to handle every node in that chunk. Each worker thread will then just update its local frontier, and then at the end when all worker threads have finished their local chunk iterations, the singular manager thread does global updates to the distances/next_frontier.
+
+## Task 2.3: Describe your handling of shared data structures
+Shared data structures are also handled differently, as there is no synchronization in this method unlike the previous way. Instead, each worker thread just updates its own local version of next_frontiers, rather than accessing the shared global version, and the singular manager node handles doing updates on the shared global next_frontiers. This also goes for the share distance data structure, except this time the worker threads don't even need a local copy of this, the manager thread can update this according to the local worker next_frontiers.
+
+## Task 2.4: List 3 attempted optimizations (that may or may not work) -
+1: The first optimization is to split up each frontier iteration into chunks, and have one thread assigned to a chunk of the vertices, rather than spawn a new thread for each vertice in the whole frontier. This may be able to heavily lower the task spawn overhead, as we can spawn much less threads during each frontier.
+
+2: The second optimization is to dynamically determine the chunk size based on the current number of threads running. This causes the number of chunks to match the number of threads specified when executing the program, which can allow no additional needed thread creation, and ensures that all threads currently running are utilized and not sitting idle.
+
+3: A third optimization is replacing the synchronization from the previous method with a standard merge of the local next_frontiers by the global manager thread. For larger grahps, that may be better suited for higher thread counts, the synchronization style may encounter much more locking and thus slow down the execution - and in this larger scale scenario allowing the local executions to just go through and having a merge done globally later may benefit performance. 
+
+## Task 2.5: Run the program with an increased number of threads until no more speedup is observed, on Dardel, school cluster, and your local computer, respectively.
+
+### 5.1: Show a screenshot of the output using the largest number of threads.
+
+### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+### 5.3: For each system, analyze the obtained performance results.
+
+## Task 3.1: Plot the strong scaling results of bfs_omp_parallel() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
+
+## Task 3.2: Plot the strong scaling results of bfs_omp_task() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
 
 # Exercise 3
 A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
