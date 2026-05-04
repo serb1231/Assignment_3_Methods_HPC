@@ -1,40 +1,117 @@
+import os
+import re
 import matplotlib.pyplot as plt
 
-# The number of threads you tested
-threads = [1, 2, 4, 8, 16, 32]
+def parse_file(filepath):
+    data = {"threads": [], "Parallel": [], "SIMD": [], "Hybrid": [], "GPU": []}
+    if not os.path.exists(filepath):
+        print(f"Warning: {filepath} not found.")
+        return data
 
-# TODO: Fill these arrays with the execution times (in seconds) 
-# for the "OMP parallel" (or Hybrid) output from your terminal!
-time_local = [5.0, 2.6, 1.5, 1.1, 1.0, 1.0] # Example data
-time_cluster = [4.8, 2.4, 1.2, 0.7, 0.4, 0.3] # Example data
-time_dardel = [4.5, 2.3, 1.1, 0.6, 0.3, 0.18] # Example data
+    with open(filepath, 'r') as f:
+        current_thread = None
+        for line in f:
+            t_match = re.search(r'Running with (\d+) threads', line)
+            if t_match:
+                current_thread = int(t_match.group(1))
+                data["threads"].append(current_thread)
+            
+            if current_thread is not None:
+                if "2. OMP parallel" in line:
+                    match = re.search(r':\s+([\d.]+)\s+s', line)
+                    if match: data["Parallel"].append(float(match.group(1)))
+                elif "3. OMP SIMD" in line:
+                    match = re.search(r':\s+([\d.]+)\s+s', line)
+                    if match: data["SIMD"].append(float(match.group(1)))
+                elif "4. OMP Hybrid" in line:
+                    match = re.search(r':\s+([\d.]+)\s+s', line)
+                    if match: data["Hybrid"].append(float(match.group(1)))
+                elif "5. OMP GPU" in line:
+                    match = re.search(r':\s+([\d.]+)\s+s', line)
+                    if match: data["GPU"].append(float(match.group(1)))
+    return data
 
-# Calculate Ideal Scaling (based on the single-thread time of Dardel as baseline, or per-system)
-# Ideal time = Time(1 thread) / number of threads
-ideal_local = [time_local[0] / t for t in threads]
-ideal_cluster = [time_cluster[0] / t for t in threads]
-ideal_dardel = [time_dardel[0] / t for t in threads]
+def plot_version(version_name, version_key, all_data):
+    plt.figure(figsize=(10, 6))
+    
+    colors = {"Local": "#1f77b4", "School": "#ff7f0e", "Dardel": "#2ca02c"}
+    markers = {"Local": "o", "School": "s", "Dardel": "^"}
+    
+    threads_used = []
+    
+    for system, data in all_data.items():
+        if not data["threads"]:
+            continue
+            
+        threads = data["threads"]
+        if len(threads) > len(threads_used):
+            threads_used = threads
+            
+        times = data[version_key]
+        
+        # Ensure times matches threads length (in case of incomplete runs)
+        min_len = min(len(threads), len(times))
+        plot_threads = threads[:min_len]
+        plot_times = times[:min_len]
+        
+        # Plot actual
+        plt.plot(plot_threads, plot_times, marker=markers[system], color=colors[system], 
+                 linewidth=2, label=f"{system} (Actual)")
+        
+        # Plot ideal (Time at 1 thread / num_threads)
+        if min_len > 0:
+            t1 = plot_times[0]
+            ideal_times = [t1 / t for t in plot_threads]
+            plt.plot(plot_threads, ideal_times, linestyle='--', color=colors[system], 
+                     alpha=0.6, label=f"{system} (Ideal)")
 
-plt.figure(figsize=(10, 6))
+    plt.title(f'Strong Scaling: {version_name}')
+    plt.xlabel('Number of Threads')
+    plt.ylabel('Execution Time (Seconds)')
+    
+    # Use log scale for both axes to clearly see scaling trends
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    
+    if threads_used:
+        plt.xticks(threads_used, threads_used)
+        
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    
+    # Put legend outside the plot if it's too big, or just inside
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    
+    filename = f'scaling_{version_key.lower()}.png'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved {filename}")
+    plt.close()
 
-# Plot actual times
-plt.plot(threads, time_local, marker='o', label='Local Computer')
-plt.plot(threads, time_cluster, marker='s', label='School Cluster')
-plt.plot(threads, time_dardel, marker='^', label='Dardel')
+def main():
+    base_dir = "../../ex1"
+    
+    files = {
+        "Local": os.path.join(base_dir, "scaling_results_local.txt"),
+        "School": os.path.join(base_dir, "scaling_results_school.txt"),
+        "Dardel": os.path.join(base_dir, "scaling_results_dardel.txt")
+    }
+    
+    all_data = {}
+    for system, filepath in files.items():
+        print(f"Parsing data for {system}...")
+        all_data[system] = parse_file(filepath)
+        
+    versions = {
+        "OMP Parallel": "Parallel",
+        "OMP SIMD": "SIMD",
+        "OMP Hybrid (Parallel + SIMD)": "Hybrid",
+        "OMP GPU Offloading": "GPU"
+    }
+    
+    for v_name, v_key in versions.items():
+        plot_version(v_name, v_key, all_data)
+        
+    print("\nAll graphs generated successfully in the scripts/ex1/ directory!")
 
-# Plot ideal scaling (dashed lines)
-plt.plot(threads, ideal_local, linestyle='--', color='blue', alpha=0.5, label='Ideal Local')
-plt.plot(threads, ideal_cluster, linestyle='--', color='orange', alpha=0.5, label='Ideal Cluster')
-plt.plot(threads, ideal_dardel, linestyle='--', color='green', alpha=0.5, label='Ideal Dardel')
-
-plt.title('Strong Scaling: Matrix Multiplication')
-plt.xlabel('Number of Threads')
-plt.ylabel('Execution Time (Seconds)')
-plt.xticks(threads)
-plt.grid(True, which="both", ls="--")
-plt.legend()
-plt.tight_layout()
-
-# Save the plot
-plt.savefig('strong_scaling.png', dpi=300)
-plt.show()
+if __name__ == "__main__":
+    main()
