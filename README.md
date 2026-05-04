@@ -319,9 +319,6 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 5. OMP GPU            : 1.6156 s correct=YES
 ...
 ```
-# Exercise 2
-## Task 1.1: which Graph representation are used?
-This graph is represented through an Adjacency matrix, and is stored through a Compressed Sparse Row representation. In an adjacency matrix, if A[i,j] is 1 (non-zero) then there is an adjacency between nodes i and j, and otherwise A[i,j] = 0. Therefore, since we can know everything about the graph just through the adjacencies, we do CSR formatting for this matrix to only store the neccessary informaton about which cells have non-zero values (adjacencies between those two graph nodes) in the matrix. 
 #### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![OMP GPU Scaling](scripts/ex1/scaling_gpu.png)
@@ -330,6 +327,11 @@ This graph is represented through an Adjacency matrix, and is stored through a C
 *   **Local Computer**: Shows a flat execution time of ~1.6s across all thread counts. Since local Macs typically lack OpenMP offloading support for local GPUs (without highly specific compiler toolchains), the `target` construct fell back to executing the loops on the host CPU.
 *   **School Cluster**: Execution time remains extremely fast and completely flat (~1.0s to 1.2s) regardless of `OMP_NUM_THREADS`. This indicates successful GPU offloading! The massive matrix multiplication was pushed to the GPU's thousands of CUDA cores. Since the GPU handles the parallelism internally, changing the number of *CPU* threads has no effect on the execution time.
 *   **Dardel**: Scales with the number of CPU threads (reaching ~0.67s at 1024 threads) rather than remaining flat. This indicates that the code was compiled without the specific GPU target architecture flags for Dardel's AMD GPUs, causing OpenMP to fall back to executing the `teams distribute parallel for` region across the host CPU threads.
+
+# Exercise 2
+
+## Task 1.1: which Graph representation are used?
+This graph is represented through an Adjacency matrix, and is stored through a Compressed Sparse Row representation. In an adjacency matrix, if A[i,j] is 1 (non-zero) then there is an adjacency between nodes i and j, and otherwise A[i,j] = 0. Therefore, since we can know everything about the graph just through the adjacencies, we do CSR formatting for this matrix to only store the neccessary informaton about which cells have non-zero values (adjacencies between those two graph nodes) in the matrix. 
 
 ## Task 1.2: Describe your design of the work sharing among threads
 The work sharing among threads is done simply on the frontier level. This is done through using #pragma omp parallel for to have the running threads share the for loop iterations done at each frontier. Each thread will then go through its iterations for each of its assigned iterations, synchronizing shared data structure update sections with other threads so only one thread does updates at a time.
