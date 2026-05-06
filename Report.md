@@ -358,7 +358,7 @@ The row_ptr vector has unique values in all indeces, and so the main difficulty 
 
 ![SchoolCluster](images/ex2/Ex2-SchoolParallel.png)
 
-Dardel-
+![Dardel](images/ex2/Ex2-Dardel-Parallel.png)
 
 
 ### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
@@ -367,11 +367,15 @@ Dardel-
 
 ![SchoolCluster](images/ex2/Ex2-School-ParallelPlot.png)
 
+![Dardel](images/ex2/Ex2-Dardel-ParallelPlot.png)
+
 ### 5.3: For each system, analyze the obtained performance results.
 
 Local Computer: On our local computer, we notice an initial speedup on 2 threads of 1.225, with a gradual increase on 3 and 4 threads, where the best speedup we acheive is seen to be 1.42 on 4 threads. After this point, the speedup still remains above 1, but gradually begins to decrease as we increase the thread count. As the thread count increases above 4, we may run into more threads concurrently observing previously unvisited nodes, and thus having increased contention and locking that begins to outweigh the increased loop parallelism benefits. The ideal speedup is simply linear with the number of threads, and so as a result eclipses our observed speedup heavily.
 
 School Cluster: On the school cluster, we notice a very small initial speedup on 2 threads, this time lower than on the local computer at only 1.04. We do notice a similar pattern with the gradual improvement on 3 and 4 threads, however the speedup still remains lower than on the local computer as it only reaches 1.227 (which is almost the same as Locally we got with only 2 threads). The speedup improvement practically stops for 5 threads with an almost identical speedup, before again similarly decreasing as thread count increases further. The point where speedup gains stops seems to be consistent with both local and school cluster - pointing to 4 threads as the point in this code setup where thread contentions starts to dominate increased loop parallelism. Once again, the observed speedup is not linear and as dramatic as the ideal speedup.
+
+Dardel: We notice the same general pattern on Dardel, but with relatively higher speedup than from the local computer and the school cluster. This time the peak speedup we get is at 5 threads rather than 4, and is slightly higher than the other two systems with 1.5 speedup. Increasing past 5 threads, the speedup begins a graudl decline that gets steep at 8 threads, falling below 1, indicating that the thread locking now dominates. Also consistent with the other systems, is that we are not able to get results near an ideal speedup.
 
 ## Task 2.2: Describe your design of the work sharing among threads
 This time work sharing is done differently between threads than in the previous method. This time, we have one "manager" thread that splits each for loop iteration into several chunks. For each chunk, using #pragma omp task around a for loop of all the nodes in the chunk, the manager will then spawn a worker thread to handle every node in that chunk. Each worker thread will then just update its local frontier, and then at the end when all worker threads have finished their local chunk iterations, the singular manager thread does global updates to the distances/next_frontier.
@@ -394,13 +398,16 @@ Shared data structures are also handled differently, as there is no synchronizat
 
 ![SchoolCluster](images/ex2/Ex2-SchoolTask.png)
 
+![Dardel](images/ex2/Ex2-Dardel-Task.png)
+
 ### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![LocalComputer](images/ex2/Ex2-LocalComputer-TaskPlot.png)
 
 ![SchoolCluster](images/ex2/Ex2-School-TaskPlot.png)
 
-Dardel-
+![Dardel](images/ex2/Ex2-Dardel-TaskPlot.png)
+
 
 ### 5.3: For each system, analyze the obtained performance results.
 
@@ -408,13 +415,17 @@ Local Computer: For the task speedup, we notice different speedup results than w
 
 School Cluster: We notice lower speedup benefits from running our task model against the school cluster. Initially, for low thread counts of 2 and 4, we notice decreased performance as our speedup is below 1. At 8 threads, we have our best speedup, however it is much lower than our peak speedup on local at just 1.15. From here, again as the thread count increases the speedup starts to gradually decrease, even falling back below 1 at a thread count of 32.
 
+Dardel: Similar to the parllel method, we notice the same trend on Dardel as we do on our local and the school cluster. The task method, when compared to the parallel method, again achieves much more gradual speedup increases as we increase the thread count to the optimal, and a more smooth decrease in speedup past that point. We notice that the peak speedup is again acheived on a higher thread count with the task method, achieving 1.64 speedup at 24 threads compared to the peak parallel speedup occuring at 5 threads. Similarly to the parallel method, Dardel is able to achieve the highest speedup of the three systems for our task parallelism.
+
 ## Task 3.1: Plot the strong scaling results of bfs_omp_parallel() and bfs_omp_task() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
 
 ![SchoolCluster](images/ex2/Ex2-School-RandomPlot.png)
 
-School Cluster: No modifications were made to either method for random graphs. With random graphs, we notice a large decrease in the effectiveness of the task parallelism method, as at no point are we able to achieve a speedup greater than 1. This may be due to the much less sparse nature of random graphs, whcih may cause merging the local frontiers together to begin to heavily dominate any performance gains made during the frontier iterations. On the other hand, we are able to see some higher speedups observed on the loop parallel method for thread counts between 4-16, and we acheive a peak speedup of 2.232 at 8 threads, before the gradual speedup decline afterwards. This may show that for non sparse graphs, the parallel loop method with added synchronization during the parallel portion heavily outperforms the task parallel model.
+School Cluster: No modifications were made to either method for random graphs. With random graphs, we notice a large decrease in the effectiveness of the task parallelism method, as at no point are we able to achieve a speedup greater than 1. This may be due to the much less sparse nature of random graphs, which may cause merging the local frontiers together to begin to heavily dominate any performance gains made during the frontier iterations. On the other hand, we are able to see some higher speedups observed on the loop parallel method for thread counts between 4-16, and we acheive a peak speedup of 2.232 at 8 threads, before the gradual speedup decline afterwards. This may show that for non sparse graphs, the parallel loop method with added synchronization during the parallel portion heavily outperforms the task parallel model.
 
-Dardel
+![Dardel](images/ex2/Ex2-Dardel-Random.png)
+
+Dardel: Again no modifications were made to either method for random graphs. We notice a similar patten as we do on the school cluster, with the task method never achieving results better than a serial version, while the parallel method is able to acheive much higher speedups that seen on scale-free graphs. For the parallel method we notice again much higher relative speedups from 4-32 threads, and we are able to obtain a 2.59 speedup at 8 threads, which is the highest speedup we have achieved across all testing. This further supports the finding that on much more dense random graphs, our parallel method with synchronization during the parallel segment is much better equipped than the task method. 
 
 # Exercise 3
 A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
