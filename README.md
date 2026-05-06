@@ -350,7 +350,18 @@ The row_ptr vector has unique values in all indeces, and so the main difficulty 
 
 ### 5.1: Show a screenshot of the output using the largest number of threads.
 
+![LocalComputer](images/ex2/Ex2-LocalParallel.png)
+
+![SchoolCluster](images/ex2/Ex2-SchoolParallel.png)
+
+Dardel-
+
+
 ### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![LocalComputer](images/ex2/Ex2-LocalComputer-ParallelPlot.png)
+
+![SchoolCluster](images/ex2/Ex2-School-ParallelPlot.png)
 
 ### 5.3: For each system, analyze the obtained performance results.
 
@@ -372,13 +383,25 @@ Shared data structures are also handled differently, as there is no synchronizat
 
 ### 5.1: Show a screenshot of the output using the largest number of threads.
 
+![LocalComputer](images/ex2/Ex2-LocalTask.png)
+
+![SchoolCluster](images/ex2/Ex2-SchoolTask.png)
+
 ### 5.2: Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
+
+![LocalComputer](images/ex2/Ex2-LocalComputer-ParallelPlot.png)
+
+![SchoolCluster](images/ex2/Ex2-School-TaskPlot.png)
+
+Dardel-
 
 ### 5.3: For each system, analyze the obtained performance results.
 
-## Task 3.1: Plot the strong scaling results of bfs_omp_parallel() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
+## Task 3.1: Plot the strong scaling results of bfs_omp_parallel() and bfs_omp_task() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
 
-## Task 3.2: Plot the strong scaling results of bfs_omp_task() on Dardel and school cluster, respectively. Describe if any modifications are made to improve the performance.
+![SchoolCluster](images/ex2/Ex2-School-RandomPlot.png)
+
+Dardel
 
 # Exercise 3
 A first thing that needed to be done was to make the initial values of the water differnet from 0. Otherwise we would have constant values throughout the simulation.
