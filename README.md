@@ -1,3 +1,21 @@
+# Exercise 3 Running
+
+For exercise 3, we had 2 files: `code_par.c` and `code_ser.c`. 
+For compiling and running the serial version:
+
+```bash
+gcc code_ser.c -o code_ser
+./code_ser
+```
+
+For running the parallel version:
+
+```bash
+gcc -fopenmp code_par.c -o code_par
+./code_par
+```
+
+
 # Bonus Running
 
 For the bonus, for running the serial file one should use
