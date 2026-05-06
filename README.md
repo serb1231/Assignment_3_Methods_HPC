@@ -1,3 +1,24 @@
+# ASSIGNMENT 3: Shared-Memory Programming
+
+# Ex1 Running
+For local:
+```bash
+gcc-15 -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+./matmul.sh
+```
+
+For Dardel
+```bash
+salloc -N 1 -t 00:15:00 -A smio@dardel.pdc.kth.se 
+cc -O3 -fopenmp hw3-omp-matmul_TBC-1.c -o matmul
+sbatch ./matmul.sh
+```
+
+For School Cluster
+```bash
+cc -O3 -fopenmp -fno-stack-protector -fcf-protection=none hw3-omp-matmul_TBC-1.c -o matmul 
+./matmul.sh
+```
 # Exercise 3 Running
 
 For exercise 3, we had 2 files: `code_par.c` and `code_ser.c`. 
