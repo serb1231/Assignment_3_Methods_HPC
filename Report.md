@@ -75,6 +75,7 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 #### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![OMP Parallel Scaling](scripts/ex1/scaling_parallel.png)
+![OMP Parallel Speedup](scripts/ex1/speedup_parallel.png)
 
 #### 4.3 For each system, analyze the obtained performance results.
 *   **Local Computer**: Scales efficiently up to 4 threads (reaching ~1.6s) before plateauing. This indicates the local CPU likely has 4 physical performance cores. Adding more threads beyond the physical core count yields no further speedup and introduces minor context-switching overhead.
@@ -155,6 +156,7 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 #### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![OMP SIMD Scaling](scripts/ex1/scaling_simd.png)
+![OMP SIMD Speedup](scripts/ex1/speedup_simd.png)
 
 #### 4.3 For each system, analyze the obtained performance results.
 *   **Local Computer**: Execution time remains completely flat at ~5.0s regardless of the number of threads.
@@ -239,6 +241,7 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 #### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![OMP Hybrid Scaling](scripts/ex1/scaling_hybrid.png)
+![OMP Hybrid Speedup](scripts/ex1/speedup_hybrid.png)
 
 
 #### 4.3 For each system, analyze the obtained performance results.
@@ -322,6 +325,7 @@ Matrix multiplication  A(1024×1024) × B(1024×4096) = C(1024×4096)
 #### 4.2 Plot the strong scaling results (in seconds in the output) on Dardel, school cluster, and your local computer, respectively. Also plot the ideal scaling on the same plot in dashed line.
 
 ![OMP GPU Scaling](scripts/ex1/scaling_gpu.png)
+![OMP GPU Speedup](scripts/ex1/speedup_gpu.png)
 
 #### 4.3 For each system, analyze the obtained performance results.
 *   **Local Computer**: Shows a flat execution time of ~1.6s across all thread counts. Since local Macs typically lack OpenMP offloading support for local GPUs (without highly specific compiler toolchains), the `target` construct fell back to executing the loops on the host CPU.
