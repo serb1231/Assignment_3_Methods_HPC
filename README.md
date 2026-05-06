@@ -19,6 +19,16 @@ For School Cluster
 cc -O3 -fopenmp -fno-stack-protector -fcf-protection=none hw3-omp-matmul_TBC-1.c -o matmul 
 ./matmul.sh
 ```
+# Ex2 Running 
+
+To compile the C++ code: g++ -O2 -fopenmp -o bfs.exe hw3-omp-bfs_TBC.cpp
+
+To run the bfs.exe file - $env:OMP_NUM_THREADS={NumThreads}; .\bfs.exe  
+(OMP_NUM_THREADS={NumThreads}; ./bfs.exe for linux)  
+
+To run the bfs.exe file with a random graph - $env:OMP_NUM_THREADS={NumThreads}; .\bfs.exe 1 {NumVertices}
+(OMP_NUM_THREADS={NumThreads}; ./bfs.exe 1 {NumVertices}  for linux)
+
 # Exercise 3 Running
 
 For exercise 3, we had 2 files: `code_par.c` and `code_ser.c`. 
